@@ -1,1 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CVS Health Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
 
+    header {
+      background-color: #CC0000;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 24px;
+      margin: 0 auto;a
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    #loginSection, #chatbox {
+      max-width: 800px;
+      margin: 30px auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    #loginSection input, #questionInput {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background-color: #CC0000;
+      color: white;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #a30000;
+    }
+
+    #output {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-left: 5px solid #CC0000;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      min-height: 50px;
+    }
+
+    .question-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .question-buttons button {
+      background-color: #e0e0e0;
+      color: #333;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      border: none;
+    }
+
+    .question-buttons button:hover {
+      background-color: #ccc;
+    }
+
+    ul {
+      margin-top: 5px;
+      padding-left: 20px;
+    }
+
+    #logoutBtn {
+      float: right;
+      margin-top: -40px;
+    }
+
+    #pagination {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    #pagination button {
+      padding: 8px 15px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>CVS Health Assistant</h1>
+  </header>
+
+  <div id="loginSection">
+    <h3>Please log in to continue</h3>
+    <input type="text" id="userIdInput" placeholder="Enter your User ID">
+    <button onclick="validateLogin()">Login</button>
+    <div id="loginError" style="color: red; margin-top: 10px;"></div>
+  </div>
+
+  <div id="chatbox" style="display: none;">
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+
+    <div id="inputSection">
+      <input type="text" id="questionInput" placeholder="Ask your question about CVS services...">
+      <button onclick="getAnswer()">Ask</button>
+    </div>
+
+    <div id="output">Your answer will appear here...</div>
+
+    <div><strong>Try asking one of these:</strong></div>
+    <div class="question-buttons" id="preloadedQuestions"></div>
+    <div id="pagination">
+      <button onclick="changePage(-1)">Previous</button>
+      <button onclick="changePage(1)">Next</button>
+    </div>
+  </div>
+
+  <script>
+    const questionsList = [
+      "What services does MinuteClinic provide?",
+      "Are mental health services available at CVS?",
+      "Does CVS offer wellness products?",
+      "What is CVS Caremark?",
+      "How can I save on prescription medications?",
+      "Does CVS provide mail-order prescription services?",
+      "What health insurance plans does CVS offer?",
+      "Are there any additional benefits with Aetna plans?",
+      "How can I find out if my doctor is in-network?",
+      "What services are offered at CVS Pharmacy?",
+      "Does CVS offer specialty pharmacy services?",
+      "Can I manage prescriptions online or via app?",
+      "Tell me about CVS Health history",
+      "What services does CVS offer",
+      "When did CVS acquire Aetna?",
+      "When did CVS acquire Caremark?",
+      "Give me a summary of CVS Health"
+    ];
+
+    const answerData = [
+      {
+        keywords: ["minuteclinic", "services"],
+        answer: "<ul><li>Walk-in care for minor illnesses & injuries</li><li>Physical exams</li><li>Vaccinations and immunizations</li><li>Screenings and tests</li></ul>"
+      },
+      {
+        keywords: ["mental health", "cvs"],
+        answer: "Yes, MinuteClinic offers mental health assessments and counseling at select locations."
+      },
+      {
+        keywords: ["wellness products", "cvs"],
+        answer: "CVS offers:<ul><li>Vitamins & supplements</li><li>Personal care items</li><li>OTC medications</li><li>Fitness & nutrition products</li></ul>"
+      },
+      {
+        keywords: ["cvs caremark"],
+        answer: "CVS Caremark manages prescription drug benefits for health plans, employers, and unions. It offers mail-order prescriptions, formulary management, and cost-control services."
+      },
+      {
+        keywords: ["save", "prescription"],
+        answer: "<ul><li>Use generic alternatives</li><li>Sign up for CVS ExtraCare savings</li><li>Use PrudentRx or CVS CarePass</li><li>Opt for 90-day supplies</li></ul>"
+      },
+      {
+        keywords: ["mail-order", "prescription"],
+        answer: "Yes, CVS offers home delivery of medications through CVS Caremark Mail Service Pharmacy for eligible members."
+      },
+      {
+        keywords: ["health insurance", "plans", "cvs"],
+        answer: "CVS Health, through Aetna, offers:<ul><li>Medicare Advantage</li><li>Medicaid</li><li>Individual and family health plans</li><li>Employer-sponsored plans</li></ul>"
+      },
+      {
+        keywords: ["aetna", "additional benefits"],
+        answer: "<ul><li>$0 MinuteClinic visits</li><li>Allowance for OTC items</li><li>Telehealth services</li><li>Chronic condition support</li></ul>"
+      },
+      {
+        keywords: ["doctor", "in-network"],
+        answer: "Visit the Aetna CVS Health provider search page and enter your location and plan details to verify if your doctor is in-network."
+      },
+      {
+        keywords: ["pharmacy", "services"],
+        answer: "<ul><li>Prescription dispensing</li><li>Medication counseling</li><li>Immunizations</li><li>Flu shots, COVID-19 vaccines</li><li>Blood pressure & health screenings</li></ul>"
+      },
+      {
+        keywords: ["specialty pharmacy"],
+        answer: "Yes, CVS Specialty supports patients with complex conditions like cancer, MS, and rheumatoid arthritis. They offer home delivery, nurse support, and medication guidance."
+      },
+      {
+        keywords: ["manage", "prescriptions", "online", "app"],
+        answer: "Yes, you can refill prescriptions, track orders, and get reminders using CVS.com or the CVS mobile app."
+      },
+      {
+        keywords: ["cvs", "history"],
+        answer: "<strong>Key CVS Health Milestones:</strong><ul>" +
+                "<li><strong>1963:</strong> Founded as Consumer Value Stores in Lowell, MA</li>" +
+                "<li><strong>1967:</strong> Opened first pharmacy location</li>" +
+                "<li><strong>1996:</strong> Became standalone public company (CVS Corporation)</li>" +
+                "<li><strong>2007:</strong> Merged with Caremark to form CVS Caremark</li>" +
+                "<li><strong>2014:</strong> Renamed to CVS Health and stopped selling tobacco</li>" +
+                "<li><strong>2018:</strong> Acquired Aetna, expanding into insurance</li>" +
+                "</ul>"
+      },
+      {
+        keywords: ["what", "services", "cvs", "offer"],
+        answer: "<ul><li>Pharmacy services</li><li>Walk-in MinuteClinic healthcare</li><li>Prescription drug coverage (Caremark)</li><li>Health insurance via Aetna</li><li>Wellness and preventive care</li></ul>"
+      },
+      {
+        keywords: ["acquire", "aetna"],
+        answer: "CVS Health acquired Aetna in <strong>2018</strong> for approximately $69 billion, combining pharmacy, retail, and insurance services."
+      },
+      {
+        keywords: ["acquire", "caremark"],
+        answer: "CVS merged with Caremark Rx in <strong>2007</strong>, forming CVS Caremark, a major player in pharmacy benefits management."
+      },
+      {
+        keywords: ["summary", "cvs", "health"],
+        answer: "<ul>" +
+                "<li>CVS Health is a leading healthcare company combining pharmacy, insurance, and clinical services.</li>" +
+                "<li>It operates over 9,000 retail pharmacy locations and 1,100+ MinuteClinic walk-in clinics.</li>" +
+                "<li>CVS Caremark manages pharmacy benefits for millions of members nationwide.</li>" +
+                "<li>Aetna, a CVS Health company, provides health insurance and Medicare plans.</li>" +
+                "<li>CVS focuses on affordable, accessible, and integrated healthcare solutions.</li>" +
+                "</ul>"
+      }
+    ];
+
+    const preloadDiv = document.getElementById("preloadedQuestions");
+    const questionsPerPage = 5;
+    let currentPage = 0;
+
+    function renderPreloadedQuestions() {
+      preloadDiv.innerHTML = "";
+      const start = currentPage * questionsPerPage;
+      const end = start + questionsPerPage;
+      const pageQuestions = questionsList.slice(start, end);
+
+      pageQuestions.forEach(q => {
+        const btn = document.createElement("button");
+        btn.innerText = q;
+        btn.onclick = () => handlePreloadedQuestion(q);
+        preloadDiv.appendChild(btn);
+      });
+
+      const paginationDiv = document.getElementById("pagination");
+      const prevButton = paginationDiv.querySelector('button:first-child');
+      const nextButton = paginationDiv.querySelector('button:last-child');
+
+      prevButton.disabled = currentPage === 0;
+      nextButton.disabled = (currentPage + 1) * questionsPerPage >= questionsList.length;
+    }
+
+    function changePage(offset) {
+      currentPage += offset;
+      renderPreloadedQuestions();
+    }
+
+    function validateLogin() {
+      const userId = document.getElementById("userIdInput").value.trim();
+      const loginError = document.getElementById("loginError");
+      if (userId === "107793") {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("chatbox").style.display = "block";
+        loginError.textContent = "";
+        renderPreloadedQuestions(); // Initial rendering after login
+      } else {
+        loginError.textContent = "Invalid User ID. Please try again.";
+      }
+    }
+
+    function logout() {
+      document.getElementById("chatbox").style.display = "none";
+      document.getElementById("loginSection").style.display = "block";
+      document.getElementById("userIdInput").value = "";
+      document.getElementById("questionInput").value = "";
+      document.getElementById("output").innerHTML = "Your answer will appear here...";
+      currentPage = 0; // Reset page on logout (though the div is hidden)
+    }
+
+    function getAnswer() {
+      const userInput = document.getElementById("questionInput").value.trim().toLowerCase();
+      showAnswer(userInput);
+    }
+
+    function handlePreloadedQuestion(text) {
+      document.getElementById("questionInput").value = text;
+      showAnswer(text.toLowerCase());
+    }
+
+    function showAnswer(userQuestion) {
+      const output = document.getElementById("output");
+
+      for (let item of answerData) {
+        if (item.keywords.every(k => userQuestion.includes(k))) {
+          output.innerHTML = "<strong>Answer:</strong> " + item.answer;
+          return;
+        }
+      }
+
+      output.innerHTML = "<strong>Sorry,</strong> I don't have an answer for that. Please try a different question.";
+    }
+  </script>
+
+</body>
+</html>
